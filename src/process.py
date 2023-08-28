@@ -1,0 +1,55 @@
+import json
+import os
+from tqdm import tqdm
+
+def process(in_path, out_path, prefix):
+    files = [f for f in os.listdir(in_path) if f.startswith(prefix) and os.path.isfile(os.path.join(in_path, f))]
+
+    error_num = 0
+    total_num = 0
+    with open(os.path.join(out_path, "error.jsonl"), "w", encoding="utf-8") as f_error:
+        for file_name in files:
+            new_datas = []
+            with open(os.path.join(in_path, file_name), "r", encoding="utf-8") as f:
+                datas = [json.loads(line) for line in f]
+                for idx, data in tqdm(enumerate(datas)):
+                    try:
+                        splits_question = question, answer_solution = data["text"].split("本题的答案为：")
+                        question = splits_question[0]
+                        answer_solution = "".join(splits_question[1:])
+                        if len(answer_solution.split("本题的解析为：")) >= 2:
+                            splits = answer_solution.split("本题的解析为：")
+                        elif len(answer_solution.split("解：")) >= 2:
+                            splits = answer_solution.split("解：")
+                        elif len(answer_solution.split("解；")) >= 2:
+                            splits = answer_solution.split("解；")
+                        answer = splits[0]
+                        solution = "".join(splits[1:])
+                        new_data = {
+                            "id": f"{file_name}/{idx}",
+                            "question": question.strip(" \n\t"),
+                            "answer": answer.strip(" \n\t"),
+                            "solution": solution.strip(" \n\t"),
+                            "subject": data["subject"],
+                            "qtype": data["qtpye"],
+                            "gradeId": data["gradeId"],
+                            "knowledges": data["knowledges"]
+                        }
+                        new_datas.append(new_data)
+                        total_num += 1
+                    except:
+                        print(data)
+                        data["file_name"] = file_name
+                        f_error.write(json.dumps(data, ensure_ascii=False) + "\n")
+                        error_num += 1
+                        total_num += 1
+            with open(os.path.join(out_path, f"out_{file_name}"), "w", encoding="utf-8") as f:
+                for data in new_datas:
+                    f.write(json.dumps(data, ensure_ascii=False) + "\n")
+        
+
+    print(f"error_num: {error_num}")
+    print(f"total_num: {total_num}")
+
+if __name__ == "__main__":
+    process("/mnt/cache/luzimu/qb_math_2023082801/qb_math_2023082801", "/mnt/cache/luzimu/qb_math_2023082801/qb_math_2023082801/outs", "pretrain_Math")
