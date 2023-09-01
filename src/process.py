@@ -34,6 +34,10 @@ def process(in_path, out_path, prefix):
                             splits = answer_solution.split("解：")
                         elif len(answer_solution.split("解；")) >= 2:
                             splits = answer_solution.split("解；")
+                        elif len(answer_solution.split("试题分析：")) >= 2:
+                            splits = answer_solution.split("试题分析：")
+                        else:
+                            splits = []
                         answer = splits[0]
                         solution = "".join(splits[1:])
                         new_data = {
@@ -66,7 +70,7 @@ def process(in_path, out_path, prefix):
 def process_test(in_path, out_path, prefix):
     files = [f for f in os.listdir(in_path) if f.startswith(prefix) and os.path.isfile(os.path.join(in_path, f))]
 
-    with open(os.path.join(out_path, "k12_test.jsonl"), "w", encoding="utf-8") as f_out:
+    with open(os.path.join(out_path, "k12_train_10000.jsonl"), "w", encoding="utf-8") as f_out:
         for file_name in files:
             with open(os.path.join(in_path, file_name), "r", encoding="utf-8") as f:
                 datas = [json.loads(line) for line in f]
@@ -80,6 +84,21 @@ def process_test(in_path, out_path, prefix):
                                                 {"role": "assistant", "content": [{"type": "text", "content": assistant}]}]}
                         f_out.write(json.dumps(new_data, ensure_ascii=False) + "\n")
         
+def process_train(in_path, out_path, prefix):
+    files = [f for f in os.listdir(in_path) if f.startswith(prefix) and os.path.isfile(os.path.join(in_path, f))]
+
+    with open(os.path.join(out_path, "k12_train_10000.jsonl"), "w", encoding="utf-8") as f_out:
+        for file_name in files:
+            with open(os.path.join(in_path, file_name), "r", encoding="utf-8") as f:
+                datas = [json.loads(line) for line in f]
+                for idx, data in tqdm(enumerate(datas)):
+                    system = ""
+                    user = data["question"]
+                    assistant = data["gpt_solution"]
+                    new_data = {"messages": [{"role": "system", "content": [{"type": "text", "content": system}]},
+                                            {"role": "user", "content": [{"type": "text", "content": user}]},
+                                            {"role": "assistant", "content": [{"type": "text", "content": assistant}]}]}
+                    f_out.write(json.dumps(new_data, ensure_ascii=False) + "\n")
 
 def split(data, out_path):
     # Shuffle the data
@@ -95,7 +114,8 @@ def split(data, out_path):
 if __name__ == "__main__":
     # process("/mnt/cache/luzimu/qb_math_2023082801/qb_math_2023082801", "/mnt/cache/luzimu/qb_math_2023082801/qb_math_2023082801/outs", "pretrain_Math")
     # process_test("/mnt/cache/luzimu/qb_math_2023082801/qb_math_2023082801/outs", "/mnt/cache/luzimu/qb_math_2023082801/qb_math_2023082801/test", "out_pretrain_Math")
-    with open("/mnt/cache/luzimu/qb_math_2023082801/qb_math_2023082801/test/k12_test.jsonl", "r") as f:
-        datas = [json.loads(line) for line in f]
-    print(len(datas))
-    split(datas, "/mnt/cache/luzimu/qb_math_2023082801/qb_math_2023082801/test")
+    # with open("/mnt/cache/luzimu/qb_math_2023082801/qb_math_2023082801/test/k12_test.jsonl", "r") as f:
+    #     datas = [json.loads(line) for line in f]
+    # print(len(datas))
+    # split(datas, "/mnt/cache/luzimu/qb_math_2023082801/qb_math_2023082801/test")
+    process_train("/mnt/cache/luzimu/qb_math_2023082801/qb_math_2023082801/gpt_outs/processed", "/mnt/cache/luzimu/qb_math_2023082801/qb_math_2023082801/train", "processed_out_10000_k12_GPT3.jsonl")
